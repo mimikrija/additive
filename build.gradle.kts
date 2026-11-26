@@ -26,7 +26,10 @@ dependencies {
     implementation(kotlin("reflect"))
 
     testImplementation(kotlin("test-junit5"))
+    testImplementation(libs.flyway.postgresql)
+    testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly(libs.postgresql.driver)
 }
 
 tasks.test {

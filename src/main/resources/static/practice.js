@@ -43,6 +43,7 @@ async function loadProblem() {
     pendingProblem?.abort();
     const request = new AbortController();
     pendingProblem = request;
+    currentProblem = undefined;
 
     problem.textContent = 'Loading a problem…';
     feedback.textContent = '';
@@ -82,11 +83,37 @@ async function loadProblem() {
     }
 }
 
-answerForm.addEventListener('submit', (event) => {
+answerForm.addEventListener('submit', async (event) => {
     event.preventDefault();
-    feedback.textContent = answerInput.valueAsNumber === currentProblem.answer
-        ? 'Correct!'
-        : 'Not quite. Try again!';
+    if (!currentProblem || checkButton.disabled) {
+        return;
+    }
+
+    const submittedProblem = currentProblem;
+    const answer = answerInput.value;
+    const body = new URLSearchParams({ ...submittedProblem, answer });
+    checkButton.disabled = true;
+    feedback.textContent = '';
+
+    try {
+        const response = await fetch('/api/problems/check', { method: 'POST', body });
+        if (!response.ok) {
+            throw new Error('Could not check the answer');
+        }
+
+        const { correct } = await response.json();
+        if (currentProblem === submittedProblem && answerInput.value === answer) {
+            feedback.textContent = correct ? 'Correct!' : 'Not quite. Try again!';
+        }
+    } catch {
+        if (currentProblem === submittedProblem && answerInput.value === answer) {
+            feedback.textContent = 'Could not check your answer. Try again.';
+        }
+    } finally {
+        if (currentProblem === submittedProblem) {
+            checkButton.disabled = false;
+        }
+    }
 });
 
 difficultySelect.addEventListener('change', () => {

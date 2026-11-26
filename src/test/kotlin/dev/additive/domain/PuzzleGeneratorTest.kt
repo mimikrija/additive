@@ -4,17 +4,12 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class PuzzleGeneratorTest {
     private val additionAndSubtractionLimits = mapOf(
         Difficulty.LEVEL_1 to 7,
         Difficulty.LEVEL_2 to 10,
         Difficulty.LEVEL_3 to 16,
-        Difficulty.LEVEL_4 to 21,
-    )
-    private val multiplicationLimits = mapOf(
-        Difficulty.LEVEL_3 to 12,
         Difficulty.LEVEL_4 to 21,
     )
 
@@ -34,24 +29,6 @@ class PuzzleGeneratorTest {
     fun `limits the first subtraction number by difficulty and keeps answers nonnegative`() {
         for ((difficulty, maxNumber) in additionAndSubtractionLimits) {
             assertValidProblems(difficulty, ProblemType.SUBTRACTION, maxNumber, Int::minus)
-        }
-    }
-
-    @Test
-    fun `limits multiplication answers by difficulty`() {
-        for ((difficulty, maxNumber) in multiplicationLimits) {
-            assertValidProblems(difficulty, ProblemType.MULTIPLICATION, maxNumber, Int::times)
-        }
-    }
-
-    @Test
-    fun `does not generate multiplication problems at level two or below`() {
-        val generator = PuzzleGenerator()
-
-        for (difficulty in listOf(Difficulty.LEVEL_1, Difficulty.LEVEL_2)) {
-            assertFailsWith<IllegalArgumentException>("Multiplication should be unavailable at $difficulty") {
-                generator.generate(difficulty, ProblemType.MULTIPLICATION)
-            }
         }
     }
 

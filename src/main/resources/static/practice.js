@@ -7,7 +7,7 @@ const checkButton = document.querySelector('#check');
 const nextButton = document.querySelector('#next');
 const feedback = document.querySelector('#feedback');
 
-const operationSymbols = { ADDITION: '+', SUBTRACTION: '−', MULTIPLICATION: '×' };
+const operationSymbols = { ADDITION: '+', SUBTRACTION: '−' };
 
 let currentProblem;
 let operationsByDifficulty;

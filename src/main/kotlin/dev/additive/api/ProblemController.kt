@@ -18,24 +18,16 @@ import java.math.BigDecimal
 @RequestMapping("/api/problems")
 class ProblemController {
     private val generator = PuzzleGenerator()
-    private val operandRange = 0..Difficulty.entries.maxOf { maxOf(it.maxNumber, it.multiplicationMax ?: 0) }
-    private val operationsByDifficulty = Difficulty.entries.associateWith { difficulty ->
-        ProblemType.entries.filter { it != ProblemType.MULTIPLICATION || difficulty.multiplicationMax != null }
-    }
+    private val operandRange = 0..Difficulty.entries.maxOf { it.maxNumber }
 
     @GetMapping("/options")
-    fun options(): Map<Difficulty, List<ProblemType>> = operationsByDifficulty
+    fun options(): Map<Difficulty, List<ProblemType>> = Difficulty.entries.associateWith { ProblemType.entries }
 
     @GetMapping
     fun generateProblem(
         @RequestParam("difficulty") difficulty: Difficulty,
         @RequestParam("type") type: ProblemType,
-    ): ProblemPrompt {
-        if (type !in operationsByDifficulty.getValue(difficulty)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "$type is unavailable at $difficulty")
-        }
-        return ProblemPrompt(generator.generate(difficulty, type))
-    }
+    ): ProblemPrompt = ProblemPrompt(generator.generate(difficulty, type))
 
     @GetMapping("/addition")
     fun generateAdditionProblem(): ProblemPrompt = ProblemPrompt(generator.generate(Difficulty.LEVEL_1))

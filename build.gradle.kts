@@ -24,4 +24,11 @@ dependencies {
     implementation(platform(libs.spring.boot.dependencies))
     implementation(libs.spring.boot.starter.web)
     implementation(kotlin("reflect"))
+
+    testImplementation(kotlin("test-junit5"))
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

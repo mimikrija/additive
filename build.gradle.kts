@@ -23,6 +23,7 @@ application {
 dependencies {
     implementation(platform(libs.spring.boot.dependencies))
     implementation(libs.spring.boot.starter.web)
+    implementation(libs.exposed.jdbc)
     implementation(kotlin("reflect"))
 
     testImplementation(kotlin("test-junit5"))

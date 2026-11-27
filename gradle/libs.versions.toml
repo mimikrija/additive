@@ -1,11 +1,13 @@
 [versions]
 kotlin = "2.1.0"
 spring-boot = "3.5.16"
+exposed = "0.61.0"
 
 [libraries]
 spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql" }
 postgresql-driver = { module = "org.postgresql:postgresql" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql" }

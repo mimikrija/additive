@@ -1,3 +1,5 @@
+import { initializeGameLanguage, setGameText } from './game-language.js';
+
 const tokenKey = 'additive-game-token';
 const problemText = document.querySelector('#problem');
 const answers = document.querySelector('#answers');
@@ -16,8 +18,8 @@ let problem;
 let pendingAnswer;
 let busy = false;
 
-function showFeedback(message = '', tone = '') {
-    feedback.textContent = message;
+function showFeedback(key, tone = '', value) {
+    setGameText(feedback, key, value);
     feedback.dataset.tone = tone;
 }
 
@@ -57,10 +59,10 @@ async function refreshProgress() {
         streak.textContent = game.currentCorrectStreak;
         bestStreak.textContent = game.bestCorrectStreak;
         icecreams.textContent = `${game.icecreams}× 🍦`;
-        icecreamsLabel.textContent = `${game.icecreams} ${game.icecreams === 1 ? 'ice cream' : 'ice creams'}`;
+        setGameText(icecreamsLabel, 'icecreamCount', game.icecreams);
     } catch {
         level.textContent = streak.textContent = bestStreak.textContent = icecreams.textContent = '–';
-        icecreamsLabel.textContent = 'Count unavailable';
+        setGameText(icecreamsLabel, 'countUnavailable');
     }
 }
 
@@ -70,7 +72,7 @@ async function loadProblem() {
     pendingAnswer = null;
     updateControls();
     showFeedback();
-    problemText.textContent = 'Loading a problem…';
+    setGameText(problemText, 'loading');
     try {
         if (!token) {
             ({ token } = await request('/children', { method: 'POST' }));
@@ -78,6 +80,7 @@ async function loadProblem() {
         }
         problem = await request('/me/problem', { method: 'POST' });
         const symbol = problem.type === 'ADDITION' ? '+' : '−';
+        delete problemText.dataset.text;
         problemText.textContent = `${problem.first} ${symbol} ${problem.second} = ?`;
         choices.replaceChildren(...problem.choices.map((value) => {
             const button = document.createElement('button');
@@ -88,9 +91,9 @@ async function loadProblem() {
         }));
         await refreshProgress();
     } catch {
-        problemText.textContent = token ? 'Could not load a problem.' : 'Ready to play?';
-        showFeedback('Could not load the game. Try again.', 'error');
-        nextButton.textContent = token ? 'Try again' : 'Start game';
+        setGameText(problemText, token ? 'problemUnavailable' : 'ready');
+        showFeedback('loadFailed', 'error');
+        setGameText(nextButton, token ? 'tryAgain' : 'start');
     } finally {
         busy = false;
         updateControls();
@@ -101,9 +104,9 @@ async function loadProblem() {
 function resetUnavailableGame() {
     problem = null;
     pendingAnswer = null;
-    problemText.textContent = 'Ready to play?';
-    nextButton.textContent = 'Start game';
-    showFeedback('Could not resume your saved game.', 'error');
+    setGameText(problemText, 'ready');
+    setGameText(nextButton, 'start');
+    showFeedback('resumeFailed', 'error');
 }
 
 choices.addEventListener('click', async (event) => {
@@ -123,15 +126,15 @@ choices.addEventListener('click', async (event) => {
         await refreshProgress();
         if (!result.counted || result.correct) {
             problem = null;
-            nextButton.textContent = 'Next problem';
+            setGameText(nextButton, 'next');
             if (!result.counted) {
-                showFeedback('This problem is already closed.');
+                showFeedback('closed');
             } else {
-                showFeedback(result.rewarded ? 'Correct! You earned an ice cream.' : 'Correct!', 'success');
+                showFeedback(result.rewarded ? 'rewarded' : 'correct', 'success');
             }
         } else {
             problem.triedChoices.push(value);
-            showFeedback('Not quite. Try another answer or skip.', 'retry');
+            showFeedback('wrong', 'retry');
         }
     } catch (error) {
         if (!token) {
@@ -139,10 +142,10 @@ choices.addEventListener('click', async (event) => {
         } else if (error.status >= 400 && error.status < 500) {
             problem = null;
             pendingAnswer = null;
-            nextButton.textContent = 'Reload problem';
-            showFeedback('Could not use that answer. Reload the problem and try again.', 'error');
+            setGameText(nextButton, 'reload');
+            showFeedback('invalidAnswer', 'error');
         } else {
-            showFeedback(`Could not check your answer. Tap ${value} to retry.`, 'error');
+            showFeedback('retryAnswer', 'error', value);
         }
     } finally {
         busy = false;
@@ -166,7 +169,7 @@ skipButton.addEventListener('click', async () => {
             await loadProblem();
             return;
         } else {
-            showFeedback('Could not skip this problem. Try again.', 'error');
+            showFeedback('skipFailed', 'error');
         }
         busy = false;
         updateControls();
@@ -177,4 +180,5 @@ skipButton.addEventListener('click', async () => {
 });
 
 nextButton.addEventListener('click', loadProblem);
+initializeGameLanguage();
 if (token) loadProblem();

@@ -5,43 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>additive</title>
     <link rel="stylesheet" href="/game.css">
-    <script src="/game.js" defer></script>
+    <script type="module" src="/game.js"></script>
 </head>
 <body class="page">
     <main class="game-card">
+        <div class="mb-2 flex justify-end gap-1" role="group" aria-labelledby="language-label">
+            <span id="language-label" class="sr-only" data-text="language">Language</span>
+            <button type="button" class="language-button" data-language="en" aria-pressed="true">
+                <span aria-hidden="true">🇬🇧</span><span class="sr-only" lang="en">English</span>
+            </button>
+            <button type="button" class="language-button" data-language="hr" aria-pressed="false">
+                <span aria-hidden="true">🇭🇷</span><span class="sr-only" lang="hr">Hrvatski</span>
+            </button>
+            <button type="button" class="language-button" data-language="nl" aria-pressed="false">
+                <span aria-hidden="true">🇳🇱</span><span class="sr-only" lang="nl">Nederlands</span>
+            </button>
+        </div>
         <h1 class="text-center text-3xl font-bold text-indigo-900">additive</h1>
-        <p class="mt-2 text-center text-slate-600">Solve problems, build a streak, and earn ice creams.</p>
 
         <dl class="my-5 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
             <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-sky-50 px-1 py-3">
-                <dt class="text-xs font-semibold text-slate-700 sm:text-sm">Level</dt>
+                <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="level">Level</dt>
                 <dd id="level" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
             </div>
             <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-amber-50 px-1 py-3">
-                <dt class="text-xs font-semibold text-slate-700 sm:text-sm">Current streak</dt>
+                <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="currentStreak">Current streak</dt>
                 <dd id="streak" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
             </div>
             <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-emerald-50 px-1 py-3">
-                <dt class="text-xs font-semibold text-slate-700 sm:text-sm">All-time best streak</dt>
+                <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="bestStreak">All-time best streak</dt>
                 <dd id="best-streak" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
             </div>
             <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-rose-50 px-1 py-3">
-                <dt class="text-xs font-semibold text-slate-700 sm:text-sm">Ice creams</dt>
+                <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="icecreams">Ice creams</dt>
                 <dd class="text-xl font-bold tabular-nums sm:text-2xl">
                     <span id="icecreams" aria-hidden="true">–</span>
-                    <span id="icecreams-label" class="sr-only">No count yet</span>
+                    <span id="icecreams-label" class="sr-only" data-text="noCount">No count yet</span>
                 </dd>
             </div>
         </dl>
 
-        <p id="problem" class="problem-card" aria-live="polite">Ready to play?</p>
+        <p id="problem" class="problem-card" aria-live="polite" data-text="ready">Ready to play?</p>
         <section id="answers" class="mt-4" aria-labelledby="answers-title" hidden>
-            <h2 id="answers-title" class="mb-2 text-center font-semibold">Pick an answer</h2>
+            <h2 id="answers-title" class="mb-2 text-center font-semibold" data-text="chooseAnswer">Pick an answer</h2>
             <div id="choices" class="grid grid-cols-5 gap-1 sm:gap-2"></div>
         </section>
         <p id="feedback" role="status" class="feedback mt-3"></p>
-        <button id="next" type="button" class="action action-primary mt-2">Start game</button>
-        <button id="skip" type="button" class="action action-secondary mt-2" hidden>Skip problem</button>
+        <button id="next" type="button" class="action action-primary mt-2" data-text="start">Start game</button>
+        <button id="skip" type="button" class="action action-secondary mt-2" data-text="skip" hidden>Skip problem</button>
     </main>
 </body>
 </html>

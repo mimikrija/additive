@@ -10,8 +10,11 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.exists
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertIgnore
+import org.jetbrains.exposed.sql.notExists
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -19,6 +22,8 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 import javax.sql.DataSource
 import kotlin.random.Random
+
+private const val ACCURACY_WINDOW_SIZE = 20
 
 private object IssuedProblems : Table("problems") {
     val id = uuid("id")
@@ -157,7 +162,22 @@ class AdaptiveGameStore(dataSource: DataSource) {
             icecreams = Icecreams.selectAll().where { Icecreams.childId eq childId }.count(),
             currentCorrectStreak = child[Children.currentCorrectRun],
             bestCorrectStreak = child[Children.bestCorrectStreak],
+            recentAccuracy = recentAccuracy(childId),
         )
+    }
+
+    private fun recentAccuracy(childId: UUID): RecentAccuracy {
+        fun countedAttempts() = Attempts.select(Attempts.id).where {
+            (Attempts.problemId eq IssuedProblems.id) and (Attempts.counted eq true)
+        }
+        val firstTryCorrect = notExists(countedAttempts().andWhere { Attempts.correct eq false })
+        val results = IssuedProblems.select(firstTryCorrect)
+            .where { (IssuedProblems.childId eq childId) and exists(countedAttempts()) }
+            .orderBy(IssuedProblems.sequence, SortOrder.DESC)
+            .limit(ACCURACY_WINDOW_SIZE)
+            .map { it[firstTryCorrect] }
+
+        return RecentAccuracy(results.count { it }, results.size)
     }
 
     private fun lockChild(token: UUID): ResultRow = Children.selectAll()
@@ -200,7 +220,10 @@ data class GameProgress(
     val icecreams: Long,
     val currentCorrectStreak: Long,
     val bestCorrectStreak: Long,
+    val recentAccuracy: RecentAccuracy,
 )
+
+data class RecentAccuracy(val firstTryCorrect: Int, val attempted: Int, val windowSize: Int = ACCURACY_WINDOW_SIZE)
 
 class GameNotFound : RuntimeException()
 class ProblemNotFound : RuntimeException()

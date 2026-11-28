@@ -1,6 +1,6 @@
 import { initializeGameLanguage, setGameText } from './game-language.js';
+import { gameTokenKey, requestGame } from './game-api.js';
 
-const tokenKey = 'additive-game-token';
 const problemText = document.querySelector('#problem');
 const answers = document.querySelector('#answers');
 const choices = document.querySelector('#choices');
@@ -13,7 +13,7 @@ const bestStreak = document.querySelector('#best-streak');
 const icecreams = document.querySelector('#icecreams');
 const icecreamsLabel = document.querySelector('#icecreams-label');
 
-let token = localStorage.getItem(tokenKey);
+let token = localStorage.getItem(gameTokenKey);
 let problem;
 let pendingAnswer;
 let busy = false;
@@ -37,19 +37,16 @@ function updateControls() {
     }
 }
 
-async function request(path, options = {}) {
-    const headers = token ? { 'X-Game-Token': token } : {};
-    const response = await fetch(`/api${path}`, { ...options, headers, cache: 'no-store' });
-    if (response.status === 401) {
-        token = null;
-        localStorage.removeItem(tokenKey);
-    }
-    if (!response.ok) {
-        const error = new Error(`Game request failed: ${response.status}`);
-        error.status = response.status;
+async function request(path, options) {
+    try {
+        return await requestGame(path, token, options);
+    } catch (error) {
+        if (error.status === 401) {
+            token = null;
+            localStorage.removeItem(gameTokenKey);
+        }
         throw error;
     }
-    return response.status === 204 ? undefined : response.json();
 }
 
 async function refreshProgress() {
@@ -76,7 +73,7 @@ async function loadProblem() {
     try {
         if (!token) {
             ({ token } = await request('/children', { method: 'POST' }));
-            localStorage.setItem(tokenKey, token);
+            localStorage.setItem(gameTokenKey, token);
         }
         problem = await request('/me/problem', { method: 'POST' });
         const symbol = problem.type === 'ADDITION' ? '+' : '−';

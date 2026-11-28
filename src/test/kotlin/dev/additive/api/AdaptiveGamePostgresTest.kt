@@ -42,6 +42,7 @@ class AdaptiveGamePostgresTest {
 
                 val first = game.issueProblem()
                 assertEquals(0, game.progress().path("bestCorrectStreak").asInt())
+                game.assertAccuracy(firstTryCorrect = 0, attempted = 0)
                 assertFalse(first.has("answer"))
                 val firstId = first.path("id").asText()
                 assertEquals(first, game.issueProblem())
@@ -61,6 +62,7 @@ class AdaptiveGamePostgresTest {
                 val wrong = game.submit(wrongId, firstId, wrongAnswer)
                 assertFalse(wrong.path("correct").asBoolean())
                 assertEquals(wrong, game.submit(wrongId, firstId, wrongAnswer))
+                game.assertAccuracy(firstTryCorrect = 0, attempted = 1)
                 assertEquals(listOf(wrongAnswer), game.issueProblem().path("triedChoices").map { it.asInt() })
                 assertEquals(1, game.progress().path("progress").path("wrongStreak").asInt())
                 assertFailsWith<HttpClientErrorException.Conflict> { game.submit(wrongId, firstId, answer) }
@@ -80,6 +82,7 @@ class AdaptiveGamePostgresTest {
                 assertEquals(1, results.count { it.path("counted").asBoolean() })
                 assertEquals(1, results.count { it.path("rewarded").asBoolean() })
                 assertEquals(1, game.progress().path("progress").path("correctStreak").asInt())
+                game.assertAccuracy(firstTryCorrect = 0, attempted = 1)
 
                 val repeatId = game.issueProblem().path("id").asText()
                 assertNotEquals(firstId, repeatId)
@@ -96,6 +99,7 @@ class AdaptiveGamePostgresTest {
                 assertEquals(2, progress.path("currentCorrectStreak").asInt())
                 assertEquals(2, progress.path("bestCorrectStreak").asInt())
                 assertEquals(1, progress.path("icecreams").asInt())
+                game.assertAccuracy(firstTryCorrect = 1, attempted = 2)
 
                 jdbc.update("UPDATE children SET level = 'LEVEL_2' WHERE token = ?", UUID.fromString(token))
                 val toSkip = game.issueProblem()
@@ -111,6 +115,7 @@ class AdaptiveGamePostgresTest {
                 assertEquals(4, afterSkip.path("progress").path("wrongStreak").asInt())
                 assertEquals(0, afterSkip.path("currentCorrectStreak").asInt())
                 assertEquals(2, afterSkip.path("bestCorrectStreak").asInt())
+                game.assertAccuracy(firstTryCorrect = 1, attempted = 3)
 
                 val next = game.issueProblem()
                 val nextId = next.path("id").asText()
@@ -120,6 +125,13 @@ class AdaptiveGamePostgresTest {
                 assertEquals("LEVEL_1", demoted.path("progress").path("difficulty").asText())
                 assertEquals(0, demoted.path("progress").path("wrongStreak").asInt())
                 assertEquals(1, demoted.path("icecreams").asInt())
+
+                repeat(21) {
+                    val problem = game.issueProblem()
+                    game.submit(UUID.randomUUID(), problem.path("id").asText(), problem.answer())
+                }
+                game.issueProblem()
+                game.assertAccuracy(firstTryCorrect = 20, attempted = 20)
             }
         }
     }
@@ -140,6 +152,13 @@ class AdaptiveGamePostgresTest {
 
     private fun RestClient.progress(): JsonNode =
         assertNotNull(get().uri("/api/me/progress").retrieve().body(JsonNode::class.java))
+
+    private fun RestClient.assertAccuracy(firstTryCorrect: Int, attempted: Int) {
+        val accuracy = progress().path("recentAccuracy")
+        assertEquals(firstTryCorrect, accuracy.path("firstTryCorrect").asInt(-1))
+        assertEquals(attempted, accuracy.path("attempted").asInt(-1))
+        assertEquals(20, accuracy.path("windowSize").asInt())
+    }
 
     private fun RestClient.skip(problemId: String) {
         post().uri("/api/me/problem/skip?problemId={problemId}", problemId).retrieve().toBodilessEntity()

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title data-text="parentView">Parent view</title>
+    <link rel="stylesheet" href="/game.css">
+    <script type="module" src="/progress.js"></script>
+</head>
+<body class="page">
+    <main class="game-card">
+        <div class="mb-2 flex justify-end gap-1" role="group" aria-labelledby="language-label">
+            <span id="language-label" class="sr-only" data-text="language">Language</span>
+            <button type="button" class="language-button" data-language="en" aria-pressed="true">
+                <span aria-hidden="true">🇬🇧</span><span class="sr-only" lang="en">English</span>
+            </button>
+            <button type="button" class="language-button" data-language="hr" aria-pressed="false">
+                <span aria-hidden="true">🇭🇷</span><span class="sr-only" lang="hr">Hrvatski</span>
+            </button>
+            <button type="button" class="language-button" data-language="nl" aria-pressed="false">
+                <span aria-hidden="true">🇳🇱</span><span class="sr-only" lang="nl">Nederlands</span>
+            </button>
+        </div>
+        <h1 class="text-center text-3xl font-bold text-indigo-900" data-text="parentView">Parent view</h1>
+        <p id="progress-status" class="my-4 text-center text-slate-700" role="status" data-text="loadingProgress">Loading progress…</p>
+
+        <div id="progress-summary" hidden>
+            <dl class="my-5 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-sky-50 px-1 py-3">
+                    <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="level">Level</dt>
+                    <dd id="level" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
+                </div>
+                <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-amber-50 px-1 py-3">
+                    <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="currentStreak">Streak</dt>
+                    <dd id="streak" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
+                </div>
+                <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-emerald-50 px-1 py-3">
+                    <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="bestStreak">Best streak</dt>
+                    <dd id="best-streak" class="text-xl font-bold tabular-nums sm:text-2xl">–</dd>
+                </div>
+                <div class="grid grid-rows-[1fr_auto] gap-1 rounded-xl bg-rose-50 px-1 py-3">
+                    <dt class="text-xs font-semibold text-slate-700 sm:text-sm" data-text="icecreams">Ice creams</dt>
+                    <dd class="text-xl font-bold tabular-nums sm:text-2xl">
+                        <span id="icecreams" aria-hidden="true">–</span>
+                        <span id="icecreams-label" class="sr-only" data-text="noCount">No count yet</span>
+                    </dd>
+                </div>
+            </dl>
+
+            <section class="mb-5 rounded-2xl bg-indigo-50 p-4 text-center" aria-labelledby="accuracy-title">
+                <h2 id="accuracy-title" class="font-semibold text-indigo-950" data-text="firstTryAccuracy">First-try accuracy</h2>
+                <p id="accuracy-percent" class="mt-1 text-3xl font-bold text-indigo-950 tabular-nums" hidden></p>
+                <p id="accuracy-count" class="my-2 font-medium tabular-nums"></p>
+                <p id="accuracy-window" class="text-sm text-slate-700"></p>
+            </section>
+        </div>
+
+        <a href="/" class="action action-secondary block text-center" data-text="backToGame">Back to game</a>
+    </main>
+</body>
+</html>

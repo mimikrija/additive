@@ -1,4 +1,5 @@
 const croatianPlurals = new Intl.PluralRules('hr');
+const formatPercent = (value, language) => new Intl.NumberFormat(language, { style: 'percent' }).format(value);
 
 const messages = {
     en: {
@@ -28,6 +29,15 @@ const messages = {
         invalidAnswer: 'Could not use that answer. Reload the problem and try again.',
         retryAnswer: (answer) => `Could not check your answer. Tap ${answer} to retry.`,
         skipFailed: 'Could not skip this problem. Try again.',
+        parentView: 'Parent view',
+        backToGame: 'Back to game',
+        firstTryAccuracy: 'First-try accuracy',
+        accuracyPercent: formatPercent,
+        accuracyWindow: (size) => `Based on the last ${size} problems attempted. Only the first answer to each problem counts.`,
+        noAnswers: 'No answers yet',
+        loadingProgress: 'Loading progress…',
+        noSavedGame: 'Start a game in this browser to see its progress here.',
+        progressUnavailable: 'Could not refresh progress. We’ll try again shortly.',
     },
     hr: {
         language: 'Jezik',
@@ -56,6 +66,15 @@ const messages = {
         invalidAnswer: 'Taj se odgovor ne može prihvatiti. Ponovno učitaj zadatak pa pokušaj opet.',
         retryAnswer: (answer) => `Odgovor nije provjeren. Dodirni ${answer} za ponovni pokušaj.`,
         skipFailed: 'Zadatak se ne može preskočiti. Pokušaj ponovno.',
+        parentView: 'Prikaz za roditelje',
+        backToGame: 'Natrag na igru',
+        firstTryAccuracy: 'Točnost iz prvog pokušaja',
+        accuracyPercent: formatPercent,
+        accuracyWindow: (size) => `Od posljednjih ${size} zadataka s odgovorom računa se samo prvi odgovor na svaki zadatak.`,
+        noAnswers: 'Još nema odgovora',
+        loadingProgress: 'Učitavanje napretka…',
+        noSavedGame: 'Započni igru u ovom pregledniku da bi se ovdje prikazao napredak.',
+        progressUnavailable: 'Napredak se nije osvježio. Pokušat ćemo ponovno uskoro.',
     },
     nl: {
         language: 'Taal',
@@ -84,6 +103,15 @@ const messages = {
         invalidAnswer: 'Dat antwoord kon niet worden gebruikt. Laad de som opnieuw en probeer het nog eens.',
         retryAnswer: (answer) => `Je antwoord kon niet worden gecontroleerd. Tik op ${answer} om het opnieuw te proberen.`,
         skipFailed: 'De som kon niet worden overgeslagen. Probeer het opnieuw.',
+        parentView: 'Voor ouders',
+        backToGame: 'Terug naar het spel',
+        firstTryAccuracy: 'In één keer goed',
+        accuracyPercent: formatPercent,
+        accuracyWindow: (size) => `Gebaseerd op de laatste ${size} beantwoorde sommen. Alleen het eerste antwoord per som telt.`,
+        noAnswers: 'Nog geen antwoorden',
+        loadingProgress: 'Voortgang wordt geladen…',
+        noSavedGame: 'Start een spel in deze browser om hier de voortgang te zien.',
+        progressUnavailable: 'De voortgang kon niet worden bijgewerkt. We proberen het zo opnieuw.',
     },
 };
 
@@ -92,7 +120,7 @@ let language = 'en';
 
 function renderText(element) {
     const message = messages[language][element.dataset.text];
-    element.textContent = typeof message === 'function' ? message(Number(element.dataset.textValue)) : message;
+    element.textContent = typeof message === 'function' ? message(Number(element.dataset.textValue), language) : message;
 }
 
 export function setGameText(element, key, value) {

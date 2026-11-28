@@ -1,4 +1,22 @@
 services:
+  app:
+    image: additive:local
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/additive
+      SPRING_DATASOURCE_USERNAME: additive
+      SPRING_DATASOURCE_PASSWORD: additive
+    ports:
+      - "127.0.0.1:${ADDITIVE_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
   db:
     image: postgres:16.11-alpine
     environment:
@@ -6,11 +24,11 @@ services:
       POSTGRES_USER: additive
       POSTGRES_PASSWORD: additive
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${ADDITIVE_DB_PORT:-5432}:5432"
     volumes:
       - additive-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U additive -d additive"]
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "additive", "-d", "additive"]
       interval: 2s
       timeout: 2s
       retries: 15

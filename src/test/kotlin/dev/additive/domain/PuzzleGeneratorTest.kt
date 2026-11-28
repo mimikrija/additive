@@ -50,18 +50,20 @@ class PuzzleGeneratorTest {
     ) {
         val generator = PuzzleGenerator(Random(42))
         val problems = List(2_000) { generator.generate(difficulty, type) }
-        val allowedRange = 0..maxNumber
+        val operandRange = 0..maxNumber
+        val positiveRange = 1..maxNumber
+        val answerRange = if (type == ProblemType.ADDITION) positiveRange else operandRange
 
         for (problem in problems) {
             assertEquals(type, problem.type)
-            assertContains(allowedRange, problem.first)
-            assertContains(allowedRange, problem.second)
-            assertContains(allowedRange, problem.answer)
+            assertContains(positiveRange, problem.first)
+            assertContains(operandRange, problem.second)
+            assertContains(answerRange, problem.answer)
             assertEquals(expectedAnswer(problem.first, problem.second), problem.answer)
         }
 
         val limitedValues = problems.map { if (type == ProblemType.SUBTRACTION) it.first else it.answer }
-        assertContains(limitedValues, 0)
+        assertContains(limitedValues, 1)
         assertContains(limitedValues, maxNumber)
     }
 }

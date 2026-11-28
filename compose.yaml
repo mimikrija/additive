@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16.11-alpine
+    environment:
+      POSTGRES_DB: additive
+      POSTGRES_USER: additive
+      POSTGRES_PASSWORD: additive
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - additive-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U additive -d additive"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+volumes:
+  additive-data:

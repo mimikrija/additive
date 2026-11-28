@@ -1,3 +1,7 @@
 spring:
   application:
     name: additive
+  datasource:
+    url: jdbc:postgresql://localhost:5432/additive
+    username: additive
+    password: additive

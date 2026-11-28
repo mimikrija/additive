@@ -3,6 +3,12 @@ package dev.additive.domain
 import kotlin.random.Random
 
 class PuzzleGenerator(private val random: Random = Random.Default) {
+    fun generate(difficulty: Difficulty, seed: Long): Problem {
+        val seededRandom = Random(seed)
+        val type = if (seededRandom.nextBoolean()) ProblemType.ADDITION else ProblemType.SUBTRACTION
+        return PuzzleGenerator(seededRandom).generate(difficulty, type)
+    }
+
     fun generate(difficulty: Difficulty, type: ProblemType = ProblemType.ADDITION): Problem = when (type) {
         ProblemType.ADDITION -> {
             val total = random.nextInt(difficulty.maxNumber + 1)

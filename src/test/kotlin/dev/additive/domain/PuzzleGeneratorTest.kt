@@ -14,6 +14,16 @@ class PuzzleGeneratorTest {
     )
 
     @Test
+    fun `a seeded problem is independent of earlier calls`() {
+        val generator = PuzzleGenerator()
+        val first = generator.generate(Difficulty.LEVEL_2, seed = 42L)
+
+        generator.generate(Difficulty.LEVEL_2, seed = 99L)
+
+        assertEquals(first, generator.generate(Difficulty.LEVEL_2, seed = 42L))
+    }
+
+    @Test
     fun `generates addition problems by default`() {
         assertEquals(ProblemType.ADDITION, PuzzleGenerator().generate(Difficulty.LEVEL_1).type)
     }

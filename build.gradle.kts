@@ -23,14 +23,15 @@ application {
 dependencies {
     implementation(platform(libs.spring.boot.dependencies))
     implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.exposed.jdbc)
+    implementation(libs.flyway.postgresql)
     implementation(kotlin("reflect"))
+    runtimeOnly(libs.postgresql.driver)
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation(libs.flyway.postgresql)
     testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.junit.platform.launcher)
-    testRuntimeOnly(libs.postgresql.driver)
 }
 
 tasks.test {

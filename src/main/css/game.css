@@ -3,7 +3,7 @@
 
 @layer components {
     .page {
-        @apply grid min-h-dvh place-items-center bg-linear-to-b from-indigo-100 to-sky-50 p-3 text-slate-900 sm:p-6;
+        @apply grid min-h-dvh items-start justify-items-center bg-linear-to-b from-indigo-100 to-sky-50 p-3 text-slate-900 sm:p-6;
     }
 
     .game-card {

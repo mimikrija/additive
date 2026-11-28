@@ -46,11 +46,11 @@ val installFrontendDependencies by tasks.registering(Exec::class) {
     outputs.dir("node_modules")
 }
 
-val tailwindOutput = layout.buildDirectory.file("generated/tailwind/practice.css")
+val tailwindOutput = layout.buildDirectory.file("generated/tailwind/game.css")
 val compileTailwind by tasks.registering(Exec::class) {
     dependsOn(installFrontendDependencies)
     commandLine(npm + listOf("run", "build:css", "--", "--output", tailwindOutput.get().asFile.absolutePath))
-    inputs.files(npmManifests, "src/main/css/practice.css")
+    inputs.files(npmManifests, "src/main/css/game.css")
     inputs.dir("src/main/resources/static")
     outputs.file(tailwindOutput)
 }

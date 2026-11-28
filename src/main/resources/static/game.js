@@ -1,17 +1,38 @@
 const tokenKey = 'additive-game-token';
 const problemText = document.querySelector('#problem');
-const answerForm = document.querySelector('#answer-form');
-const answerInput = document.querySelector('#answer');
-const checkButton = document.querySelector('#check');
+const answers = document.querySelector('#answers');
+const choices = document.querySelector('#choices');
 const nextButton = document.querySelector('#next');
+const skipButton = document.querySelector('#skip');
 const feedback = document.querySelector('#feedback');
 const level = document.querySelector('#level');
 const streak = document.querySelector('#streak');
 const icecreams = document.querySelector('#icecreams');
+const icecreamsLabel = document.querySelector('#icecreams-label');
 
 let token = localStorage.getItem(tokenKey);
 let problem;
 let pendingAnswer;
+let busy = false;
+
+function showFeedback(message = '', tone = '') {
+    feedback.textContent = message;
+    feedback.dataset.tone = tone;
+}
+
+function updateControls() {
+    answers.hidden = !problem;
+    nextButton.hidden = Boolean(problem);
+    nextButton.disabled = busy;
+    skipButton.hidden = !problem?.triedChoices.length;
+    skipButton.disabled = busy || Boolean(pendingAnswer);
+    for (const button of choices.children) {
+        const value = Number(button.value);
+        const tried = problem?.triedChoices.includes(value);
+        button.disabled = busy || !problem || tried || (pendingAnswer && pendingAnswer.value !== value);
+        button.classList.toggle('line-through', Boolean(tried));
+    }
+}
 
 async function request(path, options = {}) {
     const headers = token ? { 'X-Game-Token': token } : {};
@@ -21,9 +42,11 @@ async function request(path, options = {}) {
         localStorage.removeItem(tokenKey);
     }
     if (!response.ok) {
-        throw new Error(`Game request failed: ${response.status}`);
+        const error = new Error(`Game request failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
     }
-    return response.json();
+    return response.status === 204 ? undefined : response.json();
 }
 
 async function refreshProgress() {
@@ -31,15 +54,20 @@ async function refreshProgress() {
         const game = await request('/me/progress');
         level.textContent = game.progress.difficulty.replace('LEVEL_', '');
         streak.textContent = game.progress.correctStreak;
-        icecreams.textContent = game.icecreams;
+        icecreams.textContent = `${game.icecreams}× 🍦`;
+        icecreamsLabel.textContent = `${game.icecreams} ${game.icecreams === 1 ? 'ice cream' : 'ice creams'}`;
     } catch {
         level.textContent = streak.textContent = icecreams.textContent = '–';
+        icecreamsLabel.textContent = 'Count unavailable';
     }
 }
 
 async function loadProblem() {
-    nextButton.disabled = true;
-    feedback.textContent = '';
+    busy = true;
+    problem = null;
+    pendingAnswer = null;
+    updateControls();
+    showFeedback();
     problemText.textContent = 'Loading a problem…';
     try {
         if (!token) {
@@ -49,62 +77,101 @@ async function loadProblem() {
         problem = await request('/me/problem', { method: 'POST' });
         const symbol = problem.type === 'ADDITION' ? '+' : '−';
         problemText.textContent = `${problem.first} ${symbol} ${problem.second} = ?`;
+        choices.replaceChildren(...problem.choices.map((value) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'answer-choice';
+            button.value = button.textContent = value;
+            return button;
+        }));
         await refreshProgress();
-        pendingAnswer = null;
-        answerInput.value = '';
-        answerInput.readOnly = false;
-        answerForm.hidden = false;
-        nextButton.hidden = true;
-        answerInput.focus();
     } catch {
-        problemText.textContent = token ? 'Could not load a problem.' : 'Could not resume. Start a game to play.';
+        problemText.textContent = token ? 'Could not load a problem.' : 'Ready to play?';
+        showFeedback('Could not load the game. Try again.', 'error');
         nextButton.textContent = token ? 'Try again' : 'Start game';
     } finally {
-        nextButton.disabled = false;
+        busy = false;
+        updateControls();
+        if (problem) choices.querySelector('button:enabled')?.focus();
     }
 }
 
-answerForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!problem || checkButton.disabled) return;
+function resetUnavailableGame() {
+    problem = null;
+    pendingAnswer = null;
+    problemText.textContent = 'Ready to play?';
+    nextButton.textContent = 'Start game';
+    showFeedback('Could not resume your saved game.', 'error');
+}
 
-    pendingAnswer ??= new URLSearchParams({
-        attemptId: crypto.randomUUID(),
-        problemId: problem.id,
-        answer: answerInput.value,
-    });
-    checkButton.disabled = true;
-    answerInput.readOnly = true;
-    feedback.textContent = '';
+choices.addEventListener('click', async (event) => {
+    const button = event.target.closest('button');
+    if (!button || button.disabled || busy || !problem) return;
+
+    const value = Number(button.value);
+    pendingAnswer ??= { id: crypto.randomUUID(), value };
+    busy = true;
+    updateControls();
+    showFeedback();
 
     try {
-        const result = await request('/me/attempts', { method: 'POST', body: pendingAnswer });
+        const body = new URLSearchParams({ attemptId: pendingAnswer.id, problemId: problem.id, answer: value });
+        const result = await request('/me/attempts', { method: 'POST', body });
         pendingAnswer = null;
         await refreshProgress();
-        if (result.correct || !result.counted) {
-            answerForm.hidden = true;
+        if (!result.counted || result.correct) {
+            problem = null;
             nextButton.textContent = 'Next problem';
-            nextButton.hidden = false;
-            nextButton.focus();
-            feedback.textContent = result.rewarded ? 'Correct! You earned an ice cream.' :
-                result.counted ? 'Correct!' : 'This problem was already solved.';
+            if (!result.counted) {
+                showFeedback('This problem is already closed.');
+            } else {
+                showFeedback(result.rewarded ? 'Correct! You earned an ice cream.' : 'Correct!', 'success');
+            }
         } else {
-            feedback.textContent = 'Not quite. Try again!';
-            answerInput.readOnly = false;
-            answerInput.select();
+            problem.triedChoices.push(value);
+            showFeedback('Not quite. Try another answer or skip.', 'retry');
         }
-    } catch {
+    } catch (error) {
         if (!token) {
-            answerForm.hidden = true;
-            nextButton.textContent = 'Start game';
-            nextButton.hidden = false;
-            feedback.textContent = 'Could not resume your saved game.';
+            resetUnavailableGame();
+        } else if (error.status >= 400 && error.status < 500) {
+            problem = null;
+            pendingAnswer = null;
+            nextButton.textContent = 'Reload problem';
+            showFeedback('Could not use that answer. Reload the problem and try again.', 'error');
         } else {
-            feedback.textContent = 'Could not check this answer. Press Check answer to retry.';
+            showFeedback(`Could not check your answer. Tap ${value} to retry.`, 'error');
         }
     } finally {
-        checkButton.disabled = false;
+        busy = false;
+        updateControls();
+        (problem ? choices.querySelector('button:enabled') : nextButton)?.focus();
     }
+});
+
+skipButton.addEventListener('click', async () => {
+    if (busy || !problem || !problem.triedChoices.length || pendingAnswer) return;
+
+    busy = true;
+    updateControls();
+    try {
+        const body = new URLSearchParams({ problemId: problem.id });
+        await request('/me/problem/skip', { method: 'POST', body });
+    } catch (error) {
+        if (!token) {
+            resetUnavailableGame();
+        } else if (error.status === 409) {
+            await loadProblem();
+            return;
+        } else {
+            showFeedback('Could not skip this problem. Try again.', 'error');
+        }
+        busy = false;
+        updateControls();
+        (problem ? skipButton : nextButton).focus();
+        return;
+    }
+    await loadProblem();
 });
 
 nextButton.addEventListener('click', loadProblem);

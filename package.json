@@ -2,7 +2,7 @@
   "name": "additive",
   "private": true,
   "scripts": {
-    "build:css": "tailwindcss --input src/main/css/practice.css --minify"
+    "build:css": "tailwindcss --input src/main/css/game.css --minify"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.5",

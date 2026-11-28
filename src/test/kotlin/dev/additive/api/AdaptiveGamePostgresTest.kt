@@ -44,15 +44,23 @@ class AdaptiveGamePostgresTest {
                 assertFalse(first.has("answer"))
                 val firstId = first.path("id").asText()
                 assertEquals(first, game.issueProblem())
+                assertFailsWith<HttpClientErrorException.Conflict> { game.skip(firstId) }
                 val operandOne = first.path("first").asInt()
                 val operandTwo = first.path("second").asInt()
                 val operation = first.path("type").asText()
-                val answer = if (operation == "ADDITION") operandOne + operandTwo else operandOne - operandTwo
+                val answer = first.answer()
+                val choices = first.path("choices").map { it.asInt() }
+                assertEquals(5, choices.toSet().size)
+                assertTrue(answer in choices)
+                assertTrue(choices.all { it in 0..7 })
+                assertFailsWith<HttpClientErrorException.BadRequest> { game.submit(UUID.randomUUID(), firstId, 8) }
 
+                val wrongAnswer = choices.first { it != answer }
                 val wrongId = UUID.randomUUID()
-                val wrong = game.submit(wrongId, firstId, answer + 1)
+                val wrong = game.submit(wrongId, firstId, wrongAnswer)
                 assertFalse(wrong.path("correct").asBoolean())
-                assertEquals(wrong, game.submit(wrongId, firstId, answer + 1))
+                assertEquals(wrong, game.submit(wrongId, firstId, wrongAnswer))
+                assertEquals(listOf(wrongAnswer), game.issueProblem().path("triedChoices").map { it.asInt() })
                 assertEquals(1, game.progress().path("progress").path("wrongStreak").asInt())
                 assertFailsWith<HttpClientErrorException.Conflict> { game.submit(wrongId, firstId, answer) }
 
@@ -85,6 +93,27 @@ class AdaptiveGamePostgresTest {
                 val progress = game.progress()
                 assertEquals(2, progress.path("progress").path("correctStreak").asInt())
                 assertEquals(1, progress.path("icecreams").asInt())
+
+                jdbc.update("UPDATE children SET level = 'LEVEL_2' WHERE token = ?", UUID.fromString(token))
+                val toSkip = game.issueProblem()
+                val toSkipId = toSkip.path("id").asText()
+                for (choice in toSkip.wrongChoices()) {
+                    game.submit(UUID.randomUUID(), toSkipId, choice)
+                }
+                assertEquals(4, game.progress().path("progress").path("wrongStreak").asInt())
+                game.skip(toSkipId)
+                game.skip(toSkipId)
+                assertFalse(game.submit(UUID.randomUUID(), toSkipId, toSkip.answer()).path("counted").asBoolean())
+                assertEquals(4, game.progress().path("progress").path("wrongStreak").asInt())
+
+                val next = game.issueProblem()
+                val nextId = next.path("id").asText()
+                assertNotEquals(toSkipId, nextId)
+                game.submit(UUID.randomUUID(), nextId, next.wrongChoices().first())
+                val demoted = game.progress()
+                assertEquals("LEVEL_1", demoted.path("progress").path("difficulty").asText())
+                assertEquals(0, demoted.path("progress").path("wrongStreak").asInt())
+                assertEquals(1, demoted.path("icecreams").asInt())
             }
         }
     }
@@ -105,4 +134,19 @@ class AdaptiveGamePostgresTest {
 
     private fun RestClient.progress(): JsonNode =
         assertNotNull(get().uri("/api/me/progress").retrieve().body(JsonNode::class.java))
+
+    private fun RestClient.skip(problemId: String) {
+        post().uri("/api/me/problem/skip?problemId={problemId}", problemId).retrieve().toBodilessEntity()
+    }
+
+    private fun JsonNode.answer(): Int {
+        val first = path("first").asInt()
+        val second = path("second").asInt()
+        return if (path("type").asText() == "ADDITION") first + second else first - second
+    }
+
+    private fun JsonNode.wrongChoices(): List<Int> {
+        val correct = answer()
+        return path("choices").map { it.asInt() }.filter { it != correct }
+    }
 }

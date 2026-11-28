@@ -2,7 +2,9 @@ package dev.additive.api
 
 import dev.additive.persistence.AdaptiveGameStore
 import dev.additive.persistence.AttemptConflict
+import dev.additive.persistence.CannotSkipProblem
 import dev.additive.persistence.GameNotFound
+import dev.additive.persistence.InvalidAnswerChoice
 import dev.additive.persistence.ProblemNotFound
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpStatus
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 private const val GAME_TOKEN = "X-Game-Token"
@@ -31,17 +32,20 @@ class AdaptiveGameController(private val game: AdaptiveGameStore) {
     fun issueProblem(@RequestHeader(GAME_TOKEN, required = false) token: UUID?) =
         game.issueProblem(token ?: throw GameNotFound())
 
+    @PostMapping("/me/problem/skip")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun skipProblem(
+        @RequestHeader(GAME_TOKEN, required = false) token: UUID?,
+        @RequestParam problemId: UUID,
+    ) = game.skip(token ?: throw GameNotFound(), problemId)
+
     @PostMapping("/me/attempts")
     fun submit(
         @RequestHeader(GAME_TOKEN, required = false) token: UUID?,
         @RequestParam attemptId: UUID,
         @RequestParam problemId: UUID,
         @RequestParam answer: Int,
-    ) = if (answer >= 0) {
-        game.submit(token ?: throw GameNotFound(), attemptId, problemId, answer)
-    } else {
-        throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Answer must be nonnegative")
-    }
+    ) = game.submit(token ?: throw GameNotFound(), attemptId, problemId, answer)
 
     @GetMapping("/me/progress")
     fun progress(@RequestHeader(GAME_TOKEN, required = false) token: UUID?) =
@@ -55,9 +59,13 @@ class AdaptiveGameController(private val game: AdaptiveGameStore) {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     fun unknownProblem() = Unit
 
-    @ExceptionHandler(AttemptConflict::class)
+    @ExceptionHandler(AttemptConflict::class, CannotSkipProblem::class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    fun attemptConflict() = Unit
+    fun conflict() = Unit
+
+    @ExceptionHandler(InvalidAnswerChoice::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun invalidAnswer() = Unit
 }
 
 data class GameToken(val token: UUID)

@@ -1,0 +1,48 @@
+@import "tailwindcss" source(none);
+@source "../resources/static";
+
+@layer components {
+    .page {
+        @apply grid min-h-dvh place-items-center bg-linear-to-b from-indigo-100 to-sky-50 p-3 text-slate-900 sm:p-6;
+    }
+
+    .game-card {
+        @apply w-full max-w-lg rounded-3xl border border-indigo-100 bg-white p-5 shadow-lg sm:p-8;
+    }
+
+    .problem-card {
+        @apply grid min-h-28 place-items-center rounded-2xl bg-indigo-50 p-4 text-center text-3xl font-bold text-indigo-950 tabular-nums sm:text-4xl;
+    }
+
+    .answer-choice {
+        @apply min-h-14 rounded-xl border border-indigo-200 bg-indigo-50 text-xl font-bold text-indigo-950 tabular-nums hover:enabled:bg-indigo-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 disabled:opacity-50 sm:text-2xl;
+    }
+
+    .action {
+        @apply min-h-12 w-full rounded-xl px-4 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-700 disabled:opacity-50;
+    }
+
+    .action-primary {
+        @apply bg-indigo-700 text-white hover:enabled:bg-indigo-800;
+    }
+
+    .action-secondary {
+        @apply border border-indigo-300 text-indigo-800 hover:enabled:bg-indigo-50;
+    }
+
+    .feedback {
+        @apply min-h-6 text-center font-semibold;
+    }
+
+    .feedback[data-tone="success"] {
+        @apply text-emerald-800;
+    }
+
+    .feedback[data-tone="retry"] {
+        @apply text-amber-800;
+    }
+
+    .feedback[data-tone="error"] {
+        @apply text-rose-800;
+    }
+}

@@ -8,7 +8,7 @@ data class Progress(
 
 object DifficultyPolicy {
     private const val PROMOTION_STREAK = 20
-    private const val DEMOTION_STREAK = 6
+    private const val DEMOTION_STREAK = 5
 
     fun next(progress: Progress, correct: Boolean): Progress {
         val level = progress.difficulty

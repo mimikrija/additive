@@ -1,8 +1,10 @@
 package dev.additive.persistence
 
+import dev.additive.domain.Difficulty
 import dev.additive.domain.ProblemType
 import dev.additive.domain.Progress
 import dev.additive.domain.PuzzleGenerator
+import dev.additive.domain.answerChoices
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
@@ -16,6 +18,7 @@ import org.jetbrains.exposed.sql.update
 import org.springframework.stereotype.Repository
 import java.util.UUID
 import javax.sql.DataSource
+import kotlin.random.Random
 
 private object IssuedProblems : Table("problems") {
     val id = uuid("id")
@@ -27,6 +30,7 @@ private object IssuedProblems : Table("problems") {
     val second = integer("second_operand")
     val answer = integer("answer")
     val solved = bool("solved").databaseGenerated()
+    val skipped = bool("skipped").databaseGenerated()
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -67,12 +71,15 @@ class AdaptiveGameStore(dataSource: DataSource) {
         val childId = child[Children.id]
         val latest = IssuedProblems.selectAll().where { IssuedProblems.childId eq childId }
             .orderBy(IssuedProblems.sequence, SortOrder.DESC).limit(1).singleOrNull()
-        if (latest != null && !latest[IssuedProblems.solved]) {
+        if (latest != null && !latest[IssuedProblems.solved] && !latest[IssuedProblems.skipped]) {
+            val problemId = latest[IssuedProblems.id]
             return@transaction IssuedPrompt(
-                id = latest[IssuedProblems.id],
+                id = problemId,
                 first = latest[IssuedProblems.first],
                 second = latest[IssuedProblems.second],
                 type = ProblemType.valueOf(latest[IssuedProblems.operation]),
+                choices = latest.choices(),
+                triedChoices = wrongAnswers(problemId),
             )
         }
 
@@ -91,14 +98,12 @@ class AdaptiveGameStore(dataSource: DataSource) {
             it[second] = problem.second
             it[answer] = problem.answer
         }
-        IssuedPrompt(problemId, problem.first, problem.second, problem.type)
+        IssuedPrompt(problemId, problem.first, problem.second, problem.type, choices(problemId, problem.answer, difficulty))
     }
 
     fun submit(token: UUID, attemptId: UUID, problemId: UUID, answer: Int): SubmittedAttempt = transaction(database) {
         val childId = lockChild(token)[Children.id]
-        val problem = IssuedProblems.selectAll()
-            .where { (IssuedProblems.id eq problemId) and (IssuedProblems.childId eq childId) }
-            .singleOrNull() ?: throw ProblemNotFound()
+        val problem = problemForChild(problemId, childId)
 
         val previous = Attempts.selectAll().where { Attempts.id eq attemptId }.singleOrNull()
         if (previous != null) {
@@ -112,8 +117,10 @@ class AdaptiveGameStore(dataSource: DataSource) {
             )
         }
 
+        if (answer !in problem.choices()) throw InvalidAnswerChoice()
+
         val correct = answer == problem[IssuedProblems.answer]
-        val counted = !problem[IssuedProblems.solved]
+        val counted = !problem[IssuedProblems.solved] && !problem[IssuedProblems.skipped]
         val rewarded = counted && correct && awardIcecream(childId, problem)
         if (counted) {
             advanceChildProgress(childId, correct)
@@ -133,6 +140,15 @@ class AdaptiveGameStore(dataSource: DataSource) {
         SubmittedAttempt(correct, counted, rewarded)
     }
 
+    fun skip(token: UUID, problemId: UUID): Unit = transaction(database) {
+        val childId = lockChild(token)[Children.id]
+        val problem = problemForChild(problemId, childId)
+        if (problem[IssuedProblems.skipped]) return@transaction
+        if (problem[IssuedProblems.solved] || wrongAnswers(problemId).isEmpty()) throw CannotSkipProblem()
+
+        IssuedProblems.update({ IssuedProblems.id eq problemId }) { it[skipped] = true }
+    }
+
     fun progress(token: UUID): GameProgress = transaction(database) {
         val child = lockChild(token)
         val childId = child[Children.id]
@@ -142,6 +158,21 @@ class AdaptiveGameStore(dataSource: DataSource) {
     private fun lockChild(token: UUID): ResultRow = Children.selectAll()
         .where { Children.token eq token }.forUpdate().singleOrNull() ?: throw GameNotFound()
 
+    private fun problemForChild(problemId: UUID, childId: UUID): ResultRow = IssuedProblems.selectAll()
+        .where { (IssuedProblems.id eq problemId) and (IssuedProblems.childId eq childId) }
+        .singleOrNull() ?: throw ProblemNotFound()
+
+    private fun ResultRow.choices(): List<Int> = choices(
+        this[IssuedProblems.id], this[IssuedProblems.answer], Difficulty.valueOf(this[IssuedProblems.level]),
+    )
+
+    private fun choices(problemId: UUID, answer: Int, difficulty: Difficulty): List<Int> =
+        answerChoices(answer, difficulty, Random(problemId.mostSignificantBits xor problemId.leastSignificantBits))
+
+    private fun wrongAnswers(problemId: UUID): List<Int> = Attempts.select(Attempts.answer).withDistinct()
+        .where { (Attempts.problemId eq problemId) and (Attempts.correct eq false) and (Attempts.counted eq true) }
+        .orderBy(Attempts.answer).map { it[Attempts.answer] }
+
     private fun awardIcecream(childId: UUID, problem: ResultRow): Boolean = Icecreams.insertIgnore {
         it[Icecreams.childId] = childId
         it[operation] = problem[IssuedProblems.operation]
@@ -150,10 +181,19 @@ class AdaptiveGameStore(dataSource: DataSource) {
     }.insertedCount == 1
 }
 
-data class IssuedPrompt(val id: UUID, val first: Int, val second: Int, val type: ProblemType)
+data class IssuedPrompt(
+    val id: UUID,
+    val first: Int,
+    val second: Int,
+    val type: ProblemType,
+    val choices: List<Int>,
+    val triedChoices: List<Int> = emptyList(),
+)
 data class SubmittedAttempt(val correct: Boolean, val counted: Boolean, val rewarded: Boolean)
 data class GameProgress(val progress: Progress, val icecreams: Long)
 
 class GameNotFound : RuntimeException()
 class ProblemNotFound : RuntimeException()
 class AttemptConflict : RuntimeException()
+class CannotSkipProblem : RuntimeException()
+class InvalidAnswerChoice : RuntimeException()

@@ -16,14 +16,14 @@ class DifficultyPolicyTest {
     }
 
     @Test
-    fun `demotes on the sixth consecutive wrong answer and resets streaks`() {
-        val before = Progress(Difficulty.LEVEL_3, wrongStreak = 4)
+    fun `demotes on the fifth consecutive wrong answer and resets streaks`() {
+        val before = Progress(Difficulty.LEVEL_3, wrongStreak = 3)
 
-        val fifth = DifficultyPolicy.next(before, correct = false)
-        val sixth = DifficultyPolicy.next(fifth, correct = false)
+        val fourth = DifficultyPolicy.next(before, correct = false)
+        val fifth = DifficultyPolicy.next(fourth, correct = false)
 
-        assertEquals(Progress(Difficulty.LEVEL_3, wrongStreak = 5), fifth)
-        assertEquals(Progress(Difficulty.LEVEL_2), sixth)
+        assertEquals(Progress(Difficulty.LEVEL_3, wrongStreak = 4), fourth)
+        assertEquals(Progress(Difficulty.LEVEL_2), fifth)
     }
 
     @Test
@@ -40,14 +40,14 @@ class DifficultyPolicyTest {
     @Test
     fun `streaks saturate at the highest and lowest levels`() {
         val top = Progress(Difficulty.LEVEL_4, correctStreak = 19)
-        val bottom = Progress(Difficulty.LEVEL_1, wrongStreak = 5)
+        val bottom = Progress(Difficulty.LEVEL_1, wrongStreak = 4)
 
         val topAtLimit = DifficultyPolicy.next(top, correct = true)
         val bottomAtLimit = DifficultyPolicy.next(bottom, correct = false)
 
         assertEquals(Progress(Difficulty.LEVEL_4, correctStreak = 20), topAtLimit)
         assertEquals(topAtLimit, DifficultyPolicy.next(topAtLimit, correct = true))
-        assertEquals(Progress(Difficulty.LEVEL_1, wrongStreak = 6), bottomAtLimit)
+        assertEquals(Progress(Difficulty.LEVEL_1, wrongStreak = 5), bottomAtLimit)
         assertEquals(bottomAtLimit, DifficultyPolicy.next(bottomAtLimit, correct = false))
     }
 }

@@ -152,7 +152,12 @@ class AdaptiveGameStore(dataSource: DataSource) {
     fun progress(token: UUID): GameProgress = transaction(database) {
         val child = lockChild(token)
         val childId = child[Children.id]
-        GameProgress(child.toProgress(), Icecreams.selectAll().where { Icecreams.childId eq childId }.count())
+        GameProgress(
+            progress = child.toProgress(),
+            icecreams = Icecreams.selectAll().where { Icecreams.childId eq childId }.count(),
+            currentCorrectStreak = child[Children.currentCorrectRun],
+            bestCorrectStreak = child[Children.bestCorrectStreak],
+        )
     }
 
     private fun lockChild(token: UUID): ResultRow = Children.selectAll()
@@ -190,7 +195,12 @@ data class IssuedPrompt(
     val triedChoices: List<Int> = emptyList(),
 )
 data class SubmittedAttempt(val correct: Boolean, val counted: Boolean, val rewarded: Boolean)
-data class GameProgress(val progress: Progress, val icecreams: Long)
+data class GameProgress(
+    val progress: Progress,
+    val icecreams: Long,
+    val currentCorrectStreak: Long,
+    val bestCorrectStreak: Long,
+)
 
 class GameNotFound : RuntimeException()
 class ProblemNotFound : RuntimeException()

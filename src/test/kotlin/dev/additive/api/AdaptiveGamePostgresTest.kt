@@ -41,6 +41,7 @@ class AdaptiveGamePostgresTest {
                     .defaultHeader("X-Game-Token", token).build()
 
                 val first = game.issueProblem()
+                assertEquals(0, game.progress().path("bestCorrectStreak").asInt())
                 assertFalse(first.has("answer"))
                 val firstId = first.path("id").asText()
                 assertEquals(first, game.issueProblem())
@@ -92,6 +93,8 @@ class AdaptiveGamePostgresTest {
                 assertFalse(repeated.path("rewarded").asBoolean())
                 val progress = game.progress()
                 assertEquals(2, progress.path("progress").path("correctStreak").asInt())
+                assertEquals(2, progress.path("currentCorrectStreak").asInt())
+                assertEquals(2, progress.path("bestCorrectStreak").asInt())
                 assertEquals(1, progress.path("icecreams").asInt())
 
                 jdbc.update("UPDATE children SET level = 'LEVEL_2' WHERE token = ?", UUID.fromString(token))
@@ -104,7 +107,10 @@ class AdaptiveGamePostgresTest {
                 game.skip(toSkipId)
                 game.skip(toSkipId)
                 assertFalse(game.submit(UUID.randomUUID(), toSkipId, toSkip.answer()).path("counted").asBoolean())
-                assertEquals(4, game.progress().path("progress").path("wrongStreak").asInt())
+                val afterSkip = game.progress()
+                assertEquals(4, afterSkip.path("progress").path("wrongStreak").asInt())
+                assertEquals(0, afterSkip.path("currentCorrectStreak").asInt())
+                assertEquals(2, afterSkip.path("bestCorrectStreak").asInt())
 
                 val next = game.issueProblem()
                 val nextId = next.path("id").asText()

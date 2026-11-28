@@ -7,6 +7,7 @@ const skipButton = document.querySelector('#skip');
 const feedback = document.querySelector('#feedback');
 const level = document.querySelector('#level');
 const streak = document.querySelector('#streak');
+const bestStreak = document.querySelector('#best-streak');
 const icecreams = document.querySelector('#icecreams');
 const icecreamsLabel = document.querySelector('#icecreams-label');
 
@@ -53,11 +54,12 @@ async function refreshProgress() {
     try {
         const game = await request('/me/progress');
         level.textContent = game.progress.difficulty.replace('LEVEL_', '');
-        streak.textContent = game.progress.correctStreak;
+        streak.textContent = game.currentCorrectStreak;
+        bestStreak.textContent = game.bestCorrectStreak;
         icecreams.textContent = `${game.icecreams}× 🍦`;
         icecreamsLabel.textContent = `${game.icecreams} ${game.icecreams === 1 ? 'ice cream' : 'ice creams'}`;
     } catch {
-        level.textContent = streak.textContent = icecreams.textContent = '–';
+        level.textContent = streak.textContent = bestStreak.textContent = icecreams.textContent = '–';
         icecreamsLabel.textContent = 'Count unavailable';
     }
 }

@@ -41,18 +41,65 @@ class ChildProgressPostgresTest {
             }
             assertEquals(Progress(correctStreak = 19), beforePromotion)
             assertEquals(Progress(Difficulty.LEVEL_2), transaction(database) { advanceChildProgress(childId, true) })
+            assertEquals(Progress(Difficulty.LEVEL_2, correctStreak = 1), transaction(database) {
+                advanceChildProgress(childId, true)
+            })
 
             DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
-                connection.prepareStatement("SELECT level, correct_streak, wrong_streak FROM children WHERE id = ?")
+                connection.prepareStatement(
+                    "SELECT level, correct_streak, wrong_streak, current_correct_run, best_correct_streak FROM children WHERE id = ?",
+                )
                     .use { statement ->
                         statement.setObject(1, childId)
                         statement.executeQuery().use { row ->
                             assertTrue(row.next())
                             assertEquals("LEVEL_2", row.getString("level"))
-                            assertEquals(0, row.getInt("correct_streak"))
+                            assertEquals(1, row.getInt("correct_streak"))
                             assertEquals(0, row.getInt("wrong_streak"))
+                            assertEquals(21L, row.getLong("current_correct_run"))
+                            assertEquals(21L, row.getLong("best_correct_streak"))
                         }
                     }
+            }
+        }
+    }
+
+    @Test
+    fun `personal best migration recovers streaks from counted attempts`() {
+        PostgreSQLContainer<Nothing>("postgres:16.11-alpine").use { postgres ->
+            postgres.start()
+            val flyway = Flyway.configure().dataSource(postgres.jdbcUrl, postgres.username, postgres.password)
+            flyway.target("4").load().migrate()
+
+            DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.executeUpdate(
+                        """
+                        WITH child AS (
+                            INSERT INTO children (id) VALUES (gen_random_uuid()) RETURNING id
+                        ), issued AS (
+                            INSERT INTO problems (id, child_id, sequence_number, level, operation,
+                                first_operand, second_operand, answer, solved)
+                            SELECT gen_random_uuid(), child.id, sequence_number, 'LEVEL_1', 'ADDITION', 2, 3, 5, TRUE
+                            FROM child CROSS JOIN generate_series(1, 5) AS sequence_number
+                            RETURNING id, sequence_number
+                        )
+                        INSERT INTO attempts (id, problem_id, submitted_answer, correct, counted, rewarded)
+                        SELECT gen_random_uuid(), id, 5, TRUE, TRUE, FALSE FROM issued
+                        UNION ALL
+                        SELECT gen_random_uuid(), id, 4, FALSE, TRUE, FALSE FROM issued WHERE sequence_number = 4
+                        UNION ALL
+                        SELECT gen_random_uuid(), id, 4, FALSE, FALSE, FALSE FROM issued WHERE sequence_number = 5
+                        """.trimIndent(),
+                    )
+                    flyway.target("latest").load().migrate()
+
+                    statement.executeQuery("SELECT current_correct_run, best_correct_streak FROM children").use { row ->
+                        assertTrue(row.next())
+                        assertEquals(2L, row.getLong("current_correct_run"))
+                        assertEquals(3L, row.getLong("best_correct_streak"))
+                    }
+                }
             }
         }
     }

@@ -19,6 +19,20 @@ docker build --secret id=build_ca,src=/path/to/root-ca.pem -t additive:local .
 docker compose up --no-build -d --wait
 ```
 
+## Deploy the demo on Render + Neon
+
+1. In the [Neon Console](https://console.neon.tech/), create a Free project in **AWS Europe (Frankfurt)**. Choose Postgres 16 to match local development. Open **Connect**, turn off **Connection pooling**, and note the direct hostname, database name, role, and password. This service uses a direct connection because Flyway applies migrations at startup.
+2. In the [Render Dashboard](https://dashboard.render.com/), choose **New → Blueprint**, authorize the GitHub repository, and select `main`. The provided `render.yaml` configures a free Docker web service in Frankfurt and deploys updates after GitHub CI passes.
+3. Enter these values in Render when prompted. Keep the password out of the repository:
+
+   | Render variable | Value |
+   | --- | --- |
+   | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<direct-neon-host>/<database>?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory` |
+   | `SPRING_DATASOURCE_USERNAME` | Neon role |
+   | `SPRING_DATASOURCE_PASSWORD` | Neon password |
+
+4. Apply the Blueprint and open the HTTPS URL shown in Render once the service is live. The hosted game uses the new Neon database; local game progress stays in local Postgres.
+
 ## Develop and test
 
 With JDK 21, Node.js 24, and Docker running:

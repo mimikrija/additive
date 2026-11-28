@@ -19,4 +19,4 @@ WORKDIR /app
 COPY --from=build /workspace/build/libs/additive-*.jar /app/additive.jar
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/additive.jar"]
+CMD ["java", "-jar", "/app/additive.jar"]
